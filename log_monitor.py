@@ -92,7 +92,7 @@ def mail_configuration(mail_from, mail_to, mail_cc, mail_cco, mail_subject, scri
         msg['To'] = mail_to
         msg['CC'] = mail_cc
 
-        s = smtplib.SMTP('correio.getnet.com.br',25)
+        s = smtplib.SMTP('correio.company.com.br',25)
         s.sendmail(mail_from, [mail_to, mail_cc, mail_cco], msg.as_string())
         s.quit()
 
@@ -116,7 +116,6 @@ def create_msg(script_info):
             <tr><td>Servidor</td><td>'''+server_name+'''</td></tr>
             <tr><td>Log File</td><td>'''+file_name+'''</td></tr>
             <tr><td valign="top">Log Info</td><td>'''+alerts+'''</td></tr>
-            <tr><td>Link</td><td><a href="https://gpca.getnet.com.br/gpca/pesquisa/">https://gpca.getnet.com.br/gpca/pesquisa/</a></td></tr>
         </table>
         </body>
     '''
@@ -279,13 +278,13 @@ def get_parameters():
 
 
 if __name__ == '__main__':
-    app.info('Iniciando..')
+    app.info('Starting..')
     try:
         for config in get_config(host_name):
-            app.info('esperando 3 segundos..')
+            app.info('waiting 3 seconds..')
             time.sleep(3)
-            app.info('Iniciando thread para '+str(config))
+            app.info('Starting thread for '+str(config))
             run_thread_monitor(**config)
     except Exception as inst:
-        app.error('deu erro em: '+str(inst))
+        app.error('error at: '+str(inst))
 
