@@ -15,7 +15,7 @@ from email.MIMEText import MIMEText
 # LOG CONFIGURATION
 ####################
 
-log_dir = '/logs/' # change the directory as necessary. Aything below needs to be changed
+log_dir = '/logs/' 
 
 script_name = str(os.path.basename(__file__))[:-3]
 host_name = str((socket.gethostname()).split('.')[0])
@@ -44,11 +44,12 @@ if not len(alert.handlers):
 # MONITOR CONFIGURATION
 #######################
 # I use "if" to validade the current host an apply the configuration
-# this way we can use de same code at any servers. This configuration could be a separated file too.
+# this way we can use de same code at any servers.
 def get_config(host_name):
     app.info('Identifying configurations for the host_name:: '+str(host_name))
     monitor_config = []
     # examples
+    # this configuration will be set for the host "serv-01" only. Note the host should be lower case.
     if 'serv-01' in host_name.lower():
         filename = '/logs/myapplication.log'
         monitor_config.append( { 'filename':filename,
@@ -63,13 +64,16 @@ def get_config(host_name):
                                  'triggers_off':['error to define', 'none of it was'],
                                  'tbr':120,
                                  'time_between_newline':600} ) # 00:10h
+    # end configuration for "serv-01"
 
+    # this configuration will be set for the host "serv-01" only. Note the host should be lower case.
     if 'serv-02' in host_name.lower():
         filename = '/logs/app1.log'
         monitor_config.append( { 'filename':filename,
                                  'triggers':['warning', 'error', 'exception'],
                                  'triggers_off':['database is locked'],
                                  'time_between_newline':0} ) # 0 = disabled
+    # end configuration for "serv-02"
 
     if len(monitor_config) == 0:
         app.warning('No configuration was set for this host_name: '+str(host_name))
@@ -81,11 +85,9 @@ def get_config(host_name):
 
 # MAIL CONFIGURATION
 ####################
-def mail_configuration(mail_from, mail_to, mail_cc, mail_cco, mail_subject, script_info, template):
-    if mail_from == None or mail_to == None or mail_cc == None or mail_cco == None or mail_subject == None or script_info == None or template == None:
-        app.warning('7 arguments are required to send an e-mail')
-        print '\n>> 7 arguments are required!\n(mail_subject, mail_from, mail_to, mail_cc, mail_cco, script_info, template)'
-    else:
+def send_mail(mail_from, mail_to, mail_cc, mail_cco, mail_subject, thread_info, template):
+    status = True
+    try:
         msg = MIMEText(template,'html')
         msg['Subject'] = mail_subject
         msg['From'] = mail_from
@@ -95,63 +97,96 @@ def mail_configuration(mail_from, mail_to, mail_cc, mail_cco, mail_subject, scri
         s = smtplib.SMTP('correio.company.com.br',25)
         s.sendmail(mail_from, [mail_to, mail_cc, mail_cco], msg.as_string())
         s.quit()
+        app.info('Mail successfully send!')
+    except Exception as inst:
+        app.error('error at: '+str(inst))
+        status = False
+    return status
 
-def create_msg(script_info):
-    server_name = str(script_info.get("script_server"))
-    file_name = str(script_info.get("script_log_file"))
-    alerts = str("<br>".join(script_info.get("script_log_info")))
+
+def create_msg(thread_info):
+    server_name = str(thread_info.get('server_name'))
+    file_name = str(thread_info.get('file_name'))
+    alerts = []
+    for alert in thread_info.get('log_alert'):
+        alerts.append('<tr><td>'+alert+'</td></tr>')
+    #alerts = ''.join([(lambda x:'<tr><td>'+x+'</td></tr>')(alert) for alert in thread_info.get('log_alert')])
     txt = '''
-        <head>
-        <title>Python Monitor Alert</title>
-        <style type="text/css">
-            li { margin-top: 0.5em; margin-bottom: 0.5em; }
-            body { font-family: Georgia;}
-        </style>
-        </head>
+        <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Document</title>
+                <style type="text/css">
+                    html {
+                        font: 15pt Arial;
+                    }
 
-        <body>
-        <h1>Python Monitor</h1>
-        <h3>'''+file_name+'''</h3>
-        <table>
-            <tr><td>Servidor</td><td>'''+server_name+'''</td></tr>
-            <tr><td>Log File</td><td>'''+file_name+'''</td></tr>
-            <tr><td valign="top">Log Info</td><td>'''+alerts+'''</td></tr>
-        </table>
-        </body>
+                    div::before {
+                        content: "Log Alert";
+                        font: 10pt Arial;
+                        font-weight: bold;
+                        color: white;
+                        background-color: #273747;
+                        padding: 5px;
+                        display: block;
+                        position: relative;
+                        top: -10px;
+                        left: -10px;
+                        width: 560px;
+                    }
+
+                    div {
+                        background-color: rgba(222,222,222,.8);
+                        margin: 20px;
+                        padding: 10px;
+                        width: 550px;
+                        min-height: auto;
+                }
+                </style>
+            </head>
+            <body>
+                <div>
+                    <h1>'''+server_name+'''</h1>
+                    <h3>'''+file_name+'''</h3>
+                    <table>
+                        <tr><th valign="top">Log Alert:</th></tr>
+                        '''+alerts+'''
+                    </table>        
+                </div>
+            </body>
+            </html> 
     '''
     return txt
 
-def send_mail(script_info, logger=app):
-    logger.debug('runing..')
-    txt = create_msg(script_info)
-    mail_configuration(mail_from='python.monitor@company.com',
-                       mail_to='jhon@company.com',
-                       mail_cc='mary@company.com',
-                       mail_cco='',
-                       mail_subject='Python Monitor Alert',
-                       script_info=script_info,
-                       template=txt)
+
 
 
 
 # MAIN CODE
 ###########
-# send mail and register logs
-def print_logs(logs, filename, script_info, logger=app):
-    send_mail(script_info, logger=logger)
-    logger.debug('runing..')
+# register logs and send mail
+def print_logs(logs, filename, thread_info, mail=True, logger=app):
     for l in logs:
         logger.info(filename+' '+str(l.strip()))
+    if mail:
+        txt = create_msg(thread_info)
+        send_mail(mail_from='python.monitor@company.com',
+                   mail_to='jhon@company.com',
+                   mail_cc='mary@company.com',
+                   mail_cco='',
+                   mail_subject='Python Monitor Alert',
+                   thread_info=thread_info,
+                   template=txt)
 
 def check_threshold(valor, threshold):
     if threshold == 0:
         return False
-    elif valor > 99999: # time
+    elif valor > 99999: # time module return a float, so this is used to validade the threshold type
         return True if time.time()-valor > threshold else False
     else:
         return True if valor > threshold else False
 
-def monitor(filename, triggers, triggers_off=[], script_info={}, tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=500):
+def monitor(filename, triggers, triggers_off=[], thread_info={}, tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=500):
     # variable description
     #time_between_run = tbr     # minimum time between send alerts (could be bypassed with time_between_newline)
     #time_between_append = tba  # time to summarize logs before send an alert (could be bypassed with threshold_run_anyway)
@@ -176,7 +211,7 @@ def monitor(filename, triggers, triggers_off=[], script_info={}, tbr=10, tba=5, 
     last_status = time.time()
     last_newline = time.time()
     retorno = []
-    script_info['script_log_info'] = []
+    thread_info['log_alert'] = []
 
     # starting monitoring
     app.info('filename=%s >> Starting monitoring' %filename)
@@ -197,22 +232,22 @@ def monitor(filename, triggers, triggers_off=[], script_info={}, tbr=10, tba=5, 
             if trigger_consult(triggers, line):
                 if not trigger_consult(triggers_off, line):
                     app.debug('trigger mach!')
-                    script_info['script_log_info'].append(line,)
+                    thread_info['log_alert'].append(line,)
                     last_append = time.time()
                     retorno.append(line,)
                 else:
                     app.debug('trigger discarded by triggers_off!')
 
         # check if there is alerts
-        n_logs = len(script_info.get('script_log_info'))
+        n_logs = len(thread_info.get('log_alert'))
         if n_logs > 0:
             app.debug('there are '+str(n_logs)+' alerts waiting to be send..')
             if check_threshold(last_run, tbr): # tbr = time_between_run
                 app.debug('last_run OK: '+str(time.time()-last_run)+'/'+str(tbr))
                 if check_threshold(last_append, tba) or check_threshold(n_logs, tra): #time_between_append, threshold_run_anyway
                     app.info('Alert generated on '+filename)
-                    print_logs(logs=script_info['script_log_info'], filename=filename, script_info=script_info, logger=alert)
-                    script_info['script_log_info']=[]
+                    print_logs(logs=thread_info['log_alert'], filename=filename, thread_info=thread_info, logger=alert)
+                    thread_info['log_alert']=[]
                     last_run = time.time()
             else:
                 app.debug('last_run NOK: '+str(time.time()-last_run)+'/'+str(tbr))
@@ -226,25 +261,24 @@ def monitor(filename, triggers, triggers_off=[], script_info={}, tbr=10, tba=5, 
         if check_threshold(start_run, 0):
             app.debug('while stopping for '+filename)
             if n_logs > 0: # send remaning alertes on buffer
-                print_logs(logs=script_info['script_log_info'], filename=filename, script_info=script_info, logger=alert)
+                print_logs(logs=thread_info['log_alert'], filename=filename, thread_info=thread_info, logger=alert)
             break
 
         if check_threshold(last_newline, time_between_newline):
             msg = str(time_between_newline)+' seconds whitout no logs from '+filename
             app.info(msg)
-            script_info['script_log_info'].append(msg)
-            #send_mail(script_info, logger=app)
-            print_logs(logs=script_info['script_log_info'], filename=filename, script_info=script_info, logger=alert)
-            script_info['script_log_info']=[]
+            thread_info['log_alert'].append(msg)
+            print_logs(logs=thread_info['log_alert'], filename=filename, thread_info=thread_info, logger=alert)
+            thread_info['log_alert']=[]
             last_newline = time.time()
 
     app.info('while stoped after '+str(int(time.time()-start_run))+' seconds for '+filename)
     app.info('Stopping monitoring >> filename='+filename)
 
-def run_thread_monitor(filename, triggers, triggers_off=[], script_info={}, tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=120):
-    if script_info == {}:
-        script_info = { 'script_server':socket.gethostname(),'script_name':filename.split("\\")[-1],'script_log_file':filename,'script_log_info':[]}
-    threading.Thread(target=monitor, args=(filename, triggers, triggers_off, script_info, tbr, tba, tra, refresh_sleep, time_between_newline)).start()
+def run_thread_monitor(filename, triggers, triggers_off=[], thread_info={}, tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=120):
+    if thread_info == {}:
+        thread_info = { 'server_name':socket.gethostname(),'script_name':filename.split("\\")[-1],'file_name':filename,'log_alert':[]}
+    threading.Thread(target=monitor, args=(filename, triggers, triggers_off, thread_info, tbr, tba, tra, refresh_sleep, time_between_newline)).start()
     app.info('Trigger successfully started!')
 
 def trigger_consult(triggers, line):
