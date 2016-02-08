@@ -14,8 +14,9 @@ from email.MIMEText import MIMEText
 
 # LOG CONFIGURATION
 ####################
+#log_dir = '/logs/' 
+log_dir = '/home/moises/'
 
-log_dir = '/logs/' 
 
 script_name = str(os.path.basename(__file__))[:-3]
 host_name = str((socket.gethostname()).split('.')[0])
@@ -46,7 +47,7 @@ if not len(alert.handlers):
 # I use "if" to validade the current host an apply the configuration
 # this way we can use de same code at any servers.
 def get_config(host_name):
-    app.info('Identifying configurations for the host_name:: '+str(host_name))
+    app.info('Identifying configurations for the host_name: '+str(host_name))
     monitor_config = []
     # examples
     # this configuration will be set for the host "serv-01" only. Note the host should be lower case.
@@ -75,6 +76,16 @@ def get_config(host_name):
                                  'time_between_newline':0} ) # 0 = disabled
     # end configuration for "serv-02"
 
+    # this configuration will be set for the host "moises-virtualbox" only. Note the host should be lower case.
+    if 'moises-virtualbox' in host_name.lower():
+        filename = '/home/moises/myapp.log'
+        monitor_config.append( { 'filename':filename,
+                                 'triggers':['warning', 'error', 'exception'],
+                                 'triggers_off':[],
+                                 'tbr':120,
+                                 'time_between_newline':87000} ) #24:10h
+    # end configuration for "moises-virtualbox"
+
     if len(monitor_config) == 0:
         app.warning('No configuration was set for this host_name: '+str(host_name))
 
@@ -102,7 +113,6 @@ def send_mail(mail_from, mail_to, mail_cc, mail_cco, mail_subject, thread_info, 
         app.error('error at: '+str(inst))
         status = False
     return status
-
 
 def create_msg(thread_info):
     server_name = str(thread_info.get('server_name'))
@@ -161,13 +171,14 @@ def create_msg(thread_info):
 
 
 
-
 # MAIN CODE
 ###########
 # register logs and send mail
-def print_logs(logs, filename, thread_info, mail=True, logger=app):
+def print_logs(thread_info, mail=False):
+    logs = thread_info['log_alert']
+    filename = thread_info['file_name']
     for l in logs:
-        logger.info(filename+' '+str(l.strip()))
+        alert.info(filename+' >> '+str(l.strip()))
     if mail:
         txt = create_msg(thread_info)
         send_mail(mail_from='python.monitor@company.com',
@@ -178,6 +189,19 @@ def print_logs(logs, filename, thread_info, mail=True, logger=app):
                    thread_info=thread_info,
                    template=txt)
 
+def trigger_consult(triggers, line):
+    result = False
+    app.debug('testing line = '+str(line.strip()))
+    app.debug('triggers = '+str(triggers))
+    for t in triggers:
+        app.debug('checking triegger = '+str(t))
+        if t.lower() in line.lower():
+            app.debug('trigger "'+str(t)+'" matched')
+            result = True
+            break
+    app.debug('return = '+str(result))
+    return result
+
 def check_threshold(valor, threshold):
     if threshold == 0:
         return False
@@ -186,7 +210,7 @@ def check_threshold(valor, threshold):
     else:
         return True if valor > threshold else False
 
-def monitor(filename, triggers, triggers_off=[], thread_info={}, tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=500):
+def monitor(thread_info, filename, triggers, triggers_off=[], tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=500):
     # variable description
     #time_between_run = tbr     # minimum time between send alerts (could be bypassed with time_between_newline)
     #time_between_append = tba  # time to summarize logs before send an alert (could be bypassed with threshold_run_anyway)
@@ -206,7 +230,7 @@ def monitor(filename, triggers, triggers_off=[], thread_info={}, tbr=10, tba=5, 
 
     # auxiliary variables
     start_run = time.time()
-    last_run = time.time()
+    last_run = time.time() - tbr*60 # show the first event without waiting for the time_between_run configuration
     last_append = time.time()
     last_status = time.time()
     last_newline = time.time()
@@ -215,8 +239,8 @@ def monitor(filename, triggers, triggers_off=[], thread_info={}, tbr=10, tba=5, 
 
     # starting monitoring
     app.info('filename=%s >> Starting monitoring' %filename)
-    app.info('filename=%s >> triggers=%s' %(str(', ').join(triggers) or "No triggers was set.", filename))
-    app.info('filename=%s >> triggers_off=%s' %(str(', ').join(triggers_off) or "No triggers was set.", filename))
+    app.info('filename=%s >> triggers=%s' %(filename, str(', ').join(triggers) or "No triggers was set."))
+    app.info('filename=%s >> triggers_off=%s' %(filename, str(', ').join(triggers_off) or "No triggers was set."))
     app.info('filename=%s >> time_between_newline=%s seconds' %(filename, time_between_newline))
     while 1:
         app.debug('while runing..'+str(filename))
@@ -227,9 +251,10 @@ def monitor(filename, triggers, triggers_off=[], thread_info={}, tbr=10, tba=5, 
             time.sleep(refresh_sleep)
             file.seek(where)
         else:
-            app.debug('new line! %s' %line)
+            app.debug('new line! %s' %line.strip())
             last_newline = time.time()
             if trigger_consult(triggers, line):
+                app.debug('checking triggers_off')
                 if not trigger_consult(triggers_off, line):
                     app.debug('trigger mach!')
                     thread_info['log_alert'].append(line,)
@@ -246,7 +271,7 @@ def monitor(filename, triggers, triggers_off=[], thread_info={}, tbr=10, tba=5, 
                 app.debug('last_run OK: '+str(time.time()-last_run)+'/'+str(tbr))
                 if check_threshold(last_append, tba) or check_threshold(n_logs, tra): #time_between_append, threshold_run_anyway
                     app.info('Alert generated on '+filename)
-                    print_logs(logs=thread_info['log_alert'], filename=filename, thread_info=thread_info, logger=alert)
+                    print_logs(thread_info)
                     thread_info['log_alert']=[]
                     last_run = time.time()
             else:
@@ -261,37 +286,24 @@ def monitor(filename, triggers, triggers_off=[], thread_info={}, tbr=10, tba=5, 
         if check_threshold(start_run, 0):
             app.debug('while stopping for '+filename)
             if n_logs > 0: # send remaning alertes on buffer
-                print_logs(logs=thread_info['log_alert'], filename=filename, thread_info=thread_info, logger=alert)
+                print_logs(thread_info)
             break
 
         if check_threshold(last_newline, time_between_newline):
             msg = str(time_between_newline)+' seconds whitout no logs from '+filename
             app.info(msg)
             thread_info['log_alert'].append(msg)
-            print_logs(logs=thread_info['log_alert'], filename=filename, thread_info=thread_info, logger=alert)
+            print_logs(thread_info)
             thread_info['log_alert']=[]
             last_newline = time.time()
 
     app.info('while stoped after '+str(int(time.time()-start_run))+' seconds for '+filename)
     app.info('Stopping monitoring >> filename='+filename)
 
-def run_thread_monitor(filename, triggers, triggers_off=[], thread_info={}, tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=120):
-    if thread_info == {}:
-        thread_info = { 'server_name':socket.gethostname(),'script_name':filename.split("\\")[-1],'file_name':filename,'log_alert':[]}
-    threading.Thread(target=monitor, args=(filename, triggers, triggers_off, thread_info, tbr, tba, tra, refresh_sleep, time_between_newline)).start()
+def run_thread_monitor(filename, triggers, triggers_off=[], tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=120):
+    thread_info = { 'server_name':socket.gethostname(),'script_name':filename.split("\\")[-1],'file_name':filename,'log_alert':[]}
+    threading.Thread(target=monitor, args=(thread_info, filename, triggers, triggers_off, tbr, tba, tra, refresh_sleep, time_between_newline)).start()
     app.info('Trigger successfully started!')
-
-def trigger_consult(triggers, line):
-    result = False
-    for t in triggers:
-        app.debug('checking triegger = '+str(t))
-        app.debug('on line = '+str(line.strip()))
-        if t.lower() in line.lower():
-            app.debug('trigger "'+str(t)+'" matched')
-            result = True
-            break
-    app.debug('return = '+str(result))
-    return result
 
 
 
