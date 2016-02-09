@@ -4,8 +4,6 @@ import logging
 import os
 import smtplib
 import socket
-import socket
-import sys
 import threading
 import time
 from email.MIMEText import MIMEText
@@ -96,7 +94,7 @@ def get_config(host_name):
 
 # MAIL CONFIGURATION
 ####################
-def send_mail(mail_from, mail_to, mail_cc, mail_cco, mail_subject, thread_info, template):
+def send_mail(mail_from, mail_to, mail_cc, mail_cco, mail_subject, template):
     status = True
     try:
         msg = MIMEText(template,'html')
@@ -105,14 +103,15 @@ def send_mail(mail_from, mail_to, mail_cc, mail_cco, mail_subject, thread_info, 
         msg['To'] = mail_to
         msg['CC'] = mail_cc
 
-        s = smtplib.SMTP('correio.company.com.br',25)
+        s = smtplib.SMTP('localhost',25) #correio.company.com.br, 25
         s.sendmail(mail_from, [mail_to, mail_cc, mail_cco], msg.as_string())
         s.quit()
         app.info('Mail successfully send!')
     except Exception as inst:
-        app.error('error at: '+str(inst))
         status = False
-    return status
+        app.error('error at: '+str(inst))
+        app.info('Mail not sent!')
+
 
 def create_msg(thread_info):
     server_name = str(thread_info.get('server_name'))
@@ -181,12 +180,11 @@ def print_logs(thread_info, mail=False):
         alert.info(filename+' >> '+str(l.strip()))
     if mail:
         txt = create_msg(thread_info)
-        send_mail(mail_from='python.monitor@company.com',
-                   mail_to='jhon@company.com',
-                   mail_cc='mary@company.com',
+        send_mail(mail_from='adminssss@moises-pc.local',
+                   mail_to='admin@moises-pc.local',
+                   mail_cc='',
                    mail_cco='',
                    mail_subject='Python Monitor Alert',
-                   thread_info=thread_info,
                    template=txt)
 
 def trigger_consult(triggers, line):
@@ -308,7 +306,7 @@ def run_thread_monitor(filename, triggers, triggers_off=[], tbr=10, tba=5, tra=9
 
 
 
-# read parameters from command line
+# read parameters from command line. Not in use yet
 def get_parameters():
     parser = argparse.ArgumentParser(prog='log_monitor')
     parser.add_argument('-f',     type=str,             required=True, dest='filename',     help='Full path of monitored file.')
