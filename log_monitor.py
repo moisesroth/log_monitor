@@ -180,7 +180,7 @@ def print_logs(thread_info, mail=False):
         alert.info(filename+' >> '+str(l.strip()))
     if mail:
         txt = create_msg(thread_info)
-        send_mail(mail_from='adminssss@moises-pc.local',
+        send_mail(mail_from='admin@moises-pc.local',
                    mail_to='admin@moises-pc.local',
                    mail_cc='',
                    mail_cco='',
@@ -280,7 +280,9 @@ def monitor(thread_info, filename, triggers, triggers_off=[], tbr=10, tba=5, tra
             app.info('while running for '+filename)
             last_status = time.time()
 
-        # time to live, if seted, the monitoring will stop after the threshold. 0 always return False
+        # time to live, if seted, the monitoring will stop after the threshold.
+        # 0 always return False
+        # only use this if you will run it using cron
         if check_threshold(start_run, 0):
             app.debug('while stopping for '+filename)
             if n_logs > 0: # send remaning alertes on buffer
