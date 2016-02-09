@@ -1,6 +1,7 @@
 # coding: UTF-8
 import argparse
 import logging
+import platform
 import os
 import smtplib
 import socket
@@ -9,12 +10,15 @@ import time
 from email.MIMEText import MIMEText
 
 
-
 # LOG CONFIGURATION
 ####################
+log_dir = "C:\Users\moises\Dropbox\Getnet\Python Monitor"
 #log_dir = '/logs/' 
-log_dir = '/home/moises/'
+#log_dir = '/home/moises/'
 
+slash = '\\' if platform.system() == 'Windows' else '/'
+if log_dir[-1:] != slash:
+    log_dir += slash
 
 script_name = str(os.path.basename(__file__))[:-3]
 host_name = str((socket.gethostname()).split('.')[0])
@@ -27,6 +31,7 @@ if not len(app.handlers):
     formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s %(funcName)s(): %(message)s")
     hdlr.setFormatter(formatter)
     app.addHandler(hdlr)
+    app.info('primeiro log')
 
 log_type = 'alert'
 alert = logging.getLogger(script_name+'_'+log_type)
@@ -53,7 +58,7 @@ def get_config(host_name):
         filename = '/logs/myapplication.log'
         monitor_config.append( { 'filename':filename,
                                  'triggers':['warning', 'error', 'exception'],
-                                 'triggers_off':[],
+                                 'triggers_off':['database is locked'],
                                  'tbr':120,
                                  'time_between_newline':87000} ) #24:10h
 
@@ -66,13 +71,13 @@ def get_config(host_name):
     # end configuration for "serv-01"
 
     # this configuration will be set for the host "serv-01" only. Note the host should be lower case.
-    if 'serv-02' in host_name.lower():
-        filename = '/logs/app1.log'
+    if 'moises-pc' in host_name.lower():
+        filename = 'C:\Users\moises\Dropbox\Getnet\Python Monitor\events.txt'
         monitor_config.append( { 'filename':filename,
                                  'triggers':['warning', 'error', 'exception'],
-                                 'triggers_off':['database is locked'],
+                                 'triggers_off':[],
                                  'time_between_newline':0} ) # 0 = disabled
-    # end configuration for "serv-02"
+    # end configuration for "moises-pc"
 
     # this configuration will be set for the host "moises-virtualbox" only. Note the host should be lower case.
     if 'moises-virtualbox' in host_name.lower():
@@ -117,9 +122,9 @@ def create_msg(thread_info):
     server_name = str(thread_info.get('server_name'))
     file_name = str(thread_info.get('file_name'))
     alerts = []
-    for alert in thread_info.get('log_alert'):
-        alerts.append('<tr><td>'+alert+'</td></tr>')
-    #alerts = ''.join([(lambda x:'<tr><td>'+x+'</td></tr>')(alert) for alert in thread_info.get('log_alert')])
+    #for alert in thread_info.get('log_alert'):
+    #    alerts.append('<tr><td>'+alert+'</td></tr>')
+    alerts = ''.join([(lambda x:'<tr><td>'+x+'</td></tr>')(alert) for alert in thread_info.get('log_alert')])
     txt = '''
         <html>
             <head>
@@ -155,10 +160,10 @@ def create_msg(thread_info):
             </head>
             <body>
                 <div>
-                    <h1>'''+server_name+'''</h1>
-                    <h3>'''+file_name+'''</h3>
+                    <h1>Server: '''+server_name+'''</h1>
+                    <h3>File: '''+file_name+'''</h3>
                     <table>
-                        <tr><th valign="top">Log Alert:</th></tr>
+                        <tr><th valign="top" align="left">Log Alert:</th></tr>
                         '''+alerts+'''
                     </table>        
                 </div>
@@ -173,7 +178,7 @@ def create_msg(thread_info):
 # MAIN CODE
 ###########
 # register logs and send mail
-def print_logs(thread_info, mail=False):
+def print_logs(thread_info, mail=True):
     logs = thread_info['log_alert']
     filename = thread_info['file_name']
     for l in logs:
@@ -333,4 +338,6 @@ if __name__ == '__main__':
             run_thread_monitor(**config)
     except Exception as inst:
         app.error('error at: '+str(inst))
+
+        
 
