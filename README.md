@@ -1,6 +1,6 @@
 # info
 
-"log_monitor.py" monitor a log file, searching for some triggers and send them by e-mail.
+> "log_monitor.py" monitor a log file, searching for some triggers and send them by e-mail.
 
 
 # configuration
