@@ -11,7 +11,7 @@ nohup log_monitor.py &
 
 on Windows
 
-run bat file with "python "C:\...\log_monitor.py"
+run bat file with "python "C:\\...\log_monitor.py"
 
 # configuration
 
