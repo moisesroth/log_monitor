@@ -12,7 +12,7 @@ from email.MIMEText import MIMEText
 
 # LOG CONFIGURATION
 ####################
-log_dir = "C:\Users\moises\Dropbox\Getnet\Python Monitor"
+log_dir = "C:\Users\moises\Dropbox\python\Python Monitor"
 #log_dir = '/logs/' 
 #log_dir = '/home/moises/'
 
@@ -72,7 +72,7 @@ def get_config(host_name):
 
     # this configuration will be set for the host "serv-01" only. Note the host should be lower case.
     if 'moises-pc' in host_name.lower():
-        filename = 'C:\Users\moises\Dropbox\Getnet\Python Monitor\events.txt'
+        filename = 'C:\Users\moises\Dropbox\python\Python Monitor\events.txt'
         monitor_config.append( { 'filename':filename,
                                  'triggers':['warning', 'error', 'exception'],
                                  'triggers_off':[],
