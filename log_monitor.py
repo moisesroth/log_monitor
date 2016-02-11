@@ -146,14 +146,14 @@ def create_msg(thread_info):
                         position: relative;
                         top: -10px;
                         left: -10px;
-                        width: 560px;
+                        width: 860px;
                     }
 
                     div {
                         background-color: rgba(222,222,222,.8);
                         margin: 20px;
                         padding: 10px;
-                        width: 550px;
+                        width: 850px;
                         min-height: auto;
                 }
                 </style>
@@ -213,12 +213,12 @@ def check_threshold(valor, threshold):
     else:
         return True if valor > threshold else False
 
-def monitor(thread_info, filename, triggers, triggers_off=[], tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=500):
+def monitor(thread_info, filename, triggers, triggers_off=[], tbr=60, tba=10, tra=999, refresh_sleep=1, time_between_newline=600):
     # variable description
-    #time_between_run = tbr     # minimum time between send alerts (could be bypassed with time_between_newline)
-    #time_between_append = tba  # time to summarize logs before send an alert (could be bypassed with threshold_run_anyway)
-    #threshold_run_anyway = tra # maximun amount of logs before force send an alert (used to bypass time_between_append)
-    #time_between_newline       # maximum time without receiving logs (this is a parallel process and ignores all previously defined threshold)
+    #time_between_run = tbr     # minimum time in seconds between send alerts (could be bypassed with time_between_newline)
+    #time_between_append = tba  # time in seconds to summarize logs before send an alert (could be bypassed with threshold_run_anyway)
+    #threshold_run_anyway = tra # maximum amount of logs before force send an alert (used to bypass time_between_append)
+    #time_between_newline       # maximum time in seconds without receiving logs (this is a parallel process and ignores all previously defined threshold)
 
     # shortcut to variables
     time_between_run = tbr
@@ -233,7 +233,7 @@ def monitor(thread_info, filename, triggers, triggers_off=[], tbr=10, tba=5, tra
 
     # auxiliary variables
     start_run = time.time()
-    last_run = time.time() - tbr*60 # show the first event without waiting for the time_between_run configuration
+    last_run = time.time() - tbr # show the first event without waiting for the time_between_run configuration
     last_append = time.time()
     last_status = time.time()
     last_newline = time.time()
@@ -271,14 +271,16 @@ def monitor(thread_info, filename, triggers, triggers_off=[], tbr=10, tba=5, tra
         if n_logs > 0:
             app.debug('there are '+str(n_logs)+' alerts waiting to be send..')
             if check_threshold(last_run, tbr): # tbr = time_between_run
-                app.debug('last_run OK: '+str(time.time()-last_run)+'/'+str(tbr))
+                app.debug('last_run OK: %i/%i' %(time.time()-last_run, tbr) )
                 if check_threshold(last_append, tba) or check_threshold(n_logs, tra): #time_between_append, threshold_run_anyway
                     app.info('Alert generated on '+filename)
                     print_logs(thread_info)
                     thread_info['log_alert']=[]
                     last_run = time.time()
+                else:
+                    app.debug('last_append NOK: %i/%i' %(time.time()-last_append, tba) )
             else:
-                app.debug('last_run NOK: '+str(time.time()-last_run)+'/'+str(tbr))
+                app.debug('last_run NOK: %i/%i' %(time.time()-last_run, tbr) )
 
         # heartbeat monitoring
         if check_threshold(last_status, 60):
@@ -287,7 +289,7 @@ def monitor(thread_info, filename, triggers, triggers_off=[], tbr=10, tba=5, tra
 
         # time to live, if seted, the monitoring will stop after the threshold.
         # 0 always return False
-        # only use this if you will run it using cron
+        # only use this if you will run it using cron. Ex: cron to every minute? use 60 as threshold.
         if check_threshold(start_run, 0):
             app.debug('while stopping for '+filename)
             if n_logs > 0: # send remaning alertes on buffer
@@ -305,7 +307,7 @@ def monitor(thread_info, filename, triggers, triggers_off=[], tbr=10, tba=5, tra
     app.info('while stoped after '+str(int(time.time()-start_run))+' seconds for '+filename)
     app.info('Stopping monitoring >> filename='+filename)
 
-def run_thread_monitor(filename, triggers, triggers_off=[], tbr=10, tba=5, tra=999, refresh_sleep=1, time_between_newline=120):
+def run_thread_monitor(filename, triggers, triggers_off=[], tbr=60, tba=10, tra=999, refresh_sleep=1, time_between_newline=600):
     thread_info = { 'server_name':socket.gethostname(),'script_name':filename.split("\\")[-1],'file_name':filename,'log_alert':[]}
     threading.Thread(target=monitor, args=(thread_info, filename, triggers, triggers_off, tbr, tba, tra, refresh_sleep, time_between_newline)).start()
     app.info('Trigger successfully started!')
@@ -321,8 +323,8 @@ def get_parameters():
     parser.add_argument('-t_off', type=str,  nargs="*", default=[],    dest='triggers_off', help='Exclude from triggers.')
     parser.add_argument('-tbr',   type=int,  nargs="?", default=60,    dest='tbr',          help='Minimum time in seconds between send alerts. (default: %(default)s)')
     parser.add_argument('-tba',   type=int,  nargs="?", default=10,    dest='tba',          help='Minimum time in seconds between summary alertas. (default: %(default)s)')
-    parser.add_argument('-tra',   type=int,  nargs="?", default=100,   dest='tra',          help='Maximum amount of alerts before force send it. (default: %(default)s)')
-    parser.add_argument('-tbn',   type=int,  nargs="?", default=0,     dest='tbn',          help='Maximum time without receiving logs. 0 = Disable (default: %(default)s)')
+    parser.add_argument('-tra',   type=int,  nargs="?", default=999,   dest='tra',          help='Maximum amount of alerts before force send it. (default: %(default)s)')
+    parser.add_argument('-tbn',   type=int,  nargs="?", default=0,     dest='tbn',          help='Maximum time in seconds without receiving logs. 0 = Disable (default: %(default)s)')
     return vars(parser.parse_args())
 
 
