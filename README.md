@@ -21,11 +21,12 @@ nohup log_monitor.py &
 ```
 
 on Windows
-'''sh
+```sh
 python log_monitor.py
-'''
+```
 or usin AlwaysUp Application
-http://www.coretechnologies.com/products/AlwaysUp/
+Download: http://www.coretechnologies.com/products/AlwaysUp/
+Tutorial: https://youtu.be/aXu6T4XfZGU
 
 
 
