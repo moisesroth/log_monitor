@@ -340,6 +340,3 @@ if __name__ == '__main__':
             run_thread_monitor(**config)
     except Exception as inst:
         app.error('error at: '+str(inst))
-
-        
-
