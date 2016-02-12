@@ -24,9 +24,9 @@ on Windows
 ```sh
 python log_monitor.py
 ```
-or usin AlwaysUp Application
-Download: http://www.coretechnologies.com/products/AlwaysUp/
-Tutorial: https://youtu.be/aXu6T4XfZGU
+or using some app like AlwaysUp Application
+> http://www.coretechnologies.com/products/AlwaysUp/
+
 
 
 
