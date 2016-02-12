@@ -21,8 +21,12 @@ nohup log_monitor.py &
 ```
 
 on Windows
+'''sh
+python log_monitor.py
+'''
+or usin AlwaysUp Application
+http://www.coretechnologies.com/products/AlwaysUp/
 
-run bat file with "python "C:\\...\log_monitor.py"
 
 
  
