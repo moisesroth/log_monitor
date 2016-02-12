@@ -20,6 +20,7 @@
 nohup log_monitor.py &
 ```
 
+
 > on Windows
 ```sh
 python log_monitor.py
