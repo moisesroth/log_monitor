@@ -15,12 +15,12 @@
 
 # usage
 
-on Linux:
+- on Linux:
 ```sh
 nohup log_monitor.py &
 ```
 
-on Windows:
+- on Windows:
 ```sh
 python log_monitor.py
 ```
