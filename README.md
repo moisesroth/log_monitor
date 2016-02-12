@@ -15,16 +15,16 @@
 
 # usage
 
-- on Linux:
-```sh
+on Linux:
+- ```sh
 nohup log_monitor.py &
 ```
 
-- on Windows:
-```sh
+on Windows:
+- ```sh
 python log_monitor.py
 ```
-or using some app like AlwaysUp Application, http://www.coretechnologies.com/products/AlwaysUp/
+- or using some app like AlwaysUp Application, http://www.coretechnologies.com/products/AlwaysUp/
 
 
 
