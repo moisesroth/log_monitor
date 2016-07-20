@@ -70,7 +70,7 @@ def get_config(host_name):
                                  'time_between_newline':600} ) # 00:10h
     # end configuration for "serv-01"
 
-    # this configuration will be set for the host "serv-01" only. Note the host should be lower case.
+    # this configuration will be set for the host "moises-pc" only. Note the host should be lower case.
     if 'moises-pc' in host_name.lower():
         filename = 'C:\Users\moises\Dropbox\python\Python Monitor\events.txt'
         monitor_config.append( { 'filename':filename,
