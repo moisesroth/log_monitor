@@ -17,7 +17,7 @@
 
 on Linux:
 ```sh
-nohup log_monitor.py &
+nohup python log_monitor.py &
 ```
 
 on Windows:
